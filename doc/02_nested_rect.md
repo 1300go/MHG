@@ -1,29 +1,52 @@
 ---
 
-### 📄 파일 2: `02_nested_rect.md` (SCPC 2016: 직사각형 포함 관계)
-* **GitHub 파일 이름:** `02_nested_rect.md`
+### 📄 [2번] `02_nested_rect.md` (SCPC 2016: 직사각형 포함 관계)
+* **시간 복잡도:** $O(N^2)$ — 모든 직사각형들의 쌍 $(n, 2)$개를 서로 완전 탐색하여 직접 포함되는 진부분 순서 관계를 파악하는 이중 루프 연산 비용입니다
+* **공간 복잡도:** $O(N^2)$ — 인접 리스트(`adj`) 형태로 방향성 포함 관계 그래프(DAG)를 완전히 표현하기 위한 메모리 공간입니다.
 
 ```markdown
 # 📂 SCPC 2016 기출: 직사각형 포함 관계
 
 ### 1. 알고리즘 및 복잡도 분석
-* **알고리즘:** 다이나믹 프로그래밍(DP), 넓이 기준 정렬 (위상 정렬 효과)
-* **시간 복잡도:** $O(N^2)$ (이중 루프를 통한 포함 관계 완전 탐색)
-* **공간 복잡도:** $O(N)$ (DP 테이블 저장 배열)
+* **알고리즘:** 위상 정렬(Topological Sort) 및 다이나믹 프로그래밍(DP)
+* **시간 복잡도:** $O(N^2)$
+* **공간 복잡도:** $O(N^2)$
 
 ### 2. 파이썬(Python) 정답 코드
 ```python
+import sys
+from collections import deque
+input = sys.stdin.readline
+
 def maxNestedRectangles(rects):
-    # 사각형들을 넓이 기준으로 오름차순 정렬
-    rects.sort(key=lambda r: (r[2] - r[0]) * (r[3] - r[1]))
     n = len(rects)
+    # 1. 서로 "직접" 포함되는 관계 조사 (부분 순서 빌드)
+    adj = [[] for _ in range(n)]
+    indegree = [0] * n
+    
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                # rect: (x1, y1, x2, y2) 구조일 때 i가 j를 포함하는지 검사
+                if rects[i][0] <= rects[j][0] and rects[i][1] <= rects[j][1] and rects[i][2] >= rects[j][2] and rects[i][3] >= rects[j][3]:
+                    adj[i].append(j)
+                    indegree[j] += 1
+                    
+    # 2. 위상 정렬 및 최장 경로(가장 깊은 포함 관계) 탐색
+    queue = deque()
     dp = [1] * n
     
     for i in range(n):
-        for j in range(i):
-            if (rects[i][0] <= rects[j][0] and
-                rects[i][1] <= rects[j][1] and
-                rects[i][2] >= rects[j][2] and
-                rects[i][3] >= rects[j][3]):
-                dp[i] = max(dp[i], dp[j] + 1)
+        if indegree[i] == 0:
+            queue.append(i)
+            
+    while queue:
+        curr = queue.popleft()
+        for nxt in adj[curr]:
+            if dp[nxt] < dp[curr] + 1:
+                dp[nxt] = dp[curr] + 1
+            indegree[nxt] -= 1
+            if indegree[nxt] == 0:
+                queue.append(nxt)
+                
     return max(dp) if dp else 0
